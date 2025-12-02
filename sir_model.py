@@ -35,7 +35,7 @@ def _(mo):
 
     \begin{align*}
     \beta = \text{rate of infection} &&
-    \gamma = \text{rate of recovery}
+    \gamma = \text{rate of recovery, or how long it takes to recover}
     \end{align*}
     """)
     return
