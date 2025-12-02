@@ -33,13 +33,42 @@ def _():
     import altair as alt
     return alt, np, pd
 
+@app.cell
+def __(mo):
+    beta_slider = mo.ui.slider(
+        start=0.1, stop=1.0, step=0.05, value=0.50, label="β (rate of infection)"
+    )
+    gamma_slider = mo.ui.slider(
+        start=0.05, stop=0.5, step=0.05, value=0.20, label="γ (rate of recovery)"
+    )
+    timesteps_slider = mo.ui.slider(
+        start=50, stop=300, step=10, value=137, label="Timesteps"
+    )
+    return beta_slider, gamma_slider, timesteps_slider
+
+
+@app.cell
+def __(beta_slider, gamma_slider, mo, timesteps_slider):
+    mo.md(
+        f"""
+        ## Simulation Parameters
+
+        {beta_slider}
+
+        {gamma_slider}
+
+        {timesteps_slider}
+        """
+    )
+    return
+
 
 @app.cell
 def _(alt, np, pd):
     # SIR Model Parameters
-    beta = 0.5 #  beta_slider.value
-    gamma = 0.2 # gamma_slider.value
-    timesteps = 137 # timesteps_slider.value
+    beta = beta_slider.value
+    gamma = gamma_slider.value
+    timesteps = timesteps_slider.value
 
     # Initial populations
     init_S = 7900000
@@ -65,7 +94,7 @@ def _(alt, np, pd):
         s_prev = sim_data.loc[ii-1, 's']
         i_prev = sim_data.loc[ii-1, 'i']
         r_prev = sim_data.loc[ii-1, 'r']
-    
+
         sim_data.loc[ii, 's'] = s_prev - beta * s_prev * i_prev
         sim_data.loc[ii, 'i'] = i_prev + beta * s_prev * i_prev - gamma * i_prev
         sim_data.loc[ii, 'r'] = r_prev + gamma * i_prev
@@ -73,10 +102,10 @@ def _(alt, np, pd):
 
     # Reshape data for Altair (long format)
     sim_long = pd.melt(
-        sim_data, 
-        id_vars=['t'], 
+        sim_data,
+        id_vars=['t'],
         value_vars=['s', 'i', 'r'],
-        var_name='variable', 
+        var_name='variable',
         value_name='value'
     )
 
@@ -91,13 +120,13 @@ def _(alt, np, pd):
     # Create Altair chart
     chart = alt.Chart(sim_long).mark_line(size=3).encode(
         x=alt.X('t:Q', title='Timestep'),
-        y=alt.Y('value:Q', 
+        y=alt.Y('value:Q',
                 title='Population Proportion',
                 axis=alt.Axis(
                     tickCount=5,
                     format='%'
                 )),
-        color=alt.Color('Population:N', 
+        color=alt.Color('Population:N',
                        scale=alt.Scale(
                            domain=['Susceptible', 'Infected', 'Recovered'],
                            range=['#00BFC4', '#F8766D', '#7CAE00']
