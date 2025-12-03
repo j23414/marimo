@@ -8,7 +8,7 @@ While I'm still nostalgic for Sweave and tidyverse, this repository is for testi
 
 ```
 marimo edit sir_model.py
-marimo export html-wasm sir_model -o docs
+marimo export html-wasm sir_model.py -o docs
 cd docs
 npx serve
 ```
