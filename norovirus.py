@@ -65,15 +65,28 @@ def _(df, mo):
 
 
 @app.cell
-def _(df):
+def _():
     # Show available columns
-    print("Available columns:")
-    df.columns.tolist()
+    #print("Available columns:")
+    #df.columns.tolist()
     return
 
 
 @app.cell
-def _(df, pd):
+def _(mo):
+    stack_col = mo.ui.dropdown(
+        options=["VP1_group", "VP1_type", "VP1_variant", "RdRp_group", "RdRp_type", "RdRp_variant","region", "country", "division", "location", "host_type"],
+        value="VP1_type",
+        label="Stack by:"
+    )
+    stack_col
+    return (stack_col,)
+
+
+@app.cell
+def _(df, pd, stack_col):
+    stack = stack_col.value
+
     # Extract year from date column
     df_with_year = df.copy()
     df_with_year['year'] = pd.to_datetime(df_with_year['date'], errors='coerce').dt.year
@@ -82,18 +95,26 @@ def _(df, pd):
     df_with_year = df_with_year.dropna(subset=['year'])
     df_with_year['year'] = df_with_year['year'].astype(int)
 
-    # Count records per year
-    records_per_year = df_with_year.groupby('year').size().reset_index(name='count')
+    # Count records per year and VP1 Group
+    #records_per_year = df_with_year.groupby(['year', 'group']).size().reset_index(name='count')
+    records_per_year = (
+        df_with_year
+          .groupby(['year', stack])
+          .size()
+          .reset_index(name='count')
+    )
     records_per_year
-    return df_with_year, records_per_year
+    return records_per_year, stack
 
 
 @app.cell
-def _(alt, records_per_year):
+def _(alt, records_per_year, stack):
     # Records per year chart
     year_chart = alt.Chart(records_per_year).mark_bar().encode(
         x=alt.X('year:O', title='Year'),
         y=alt.Y('count:Q', title='Number of Records'),
+        #color=alt.Color('VP1_type:N', title='VP1 group'),
+        color=alt.Color(f"{stack}:N", title=stack),
         tooltip=['year:O', 'count:Q']
     ).properties(
         width=700,
@@ -102,77 +123,6 @@ def _(alt, records_per_year):
     ).interactive()
 
     year_chart
-    return
-
-
-@app.cell
-def _(df_with_year):
-    # Check if VP1_group exists and count by year and group
-    if 'VP1_group' in df_with_year.columns:
-        records_by_group = df_with_year.groupby(['year', 'VP1_group']).size().reset_index(name='count')
-        # Filter to top groups for cleaner visualization
-        top_groups = records_by_group.groupby('VP1_group')['count'].sum().nlargest(10).index
-        records_by_group = records_by_group[records_by_group['VP1_group'].isin(top_groups)]
-        records_by_group
-    else:
-        print("VP1_group column not found. Available columns:")
-        print(df_with_year.columns.tolist())
-        records_by_group = None
-
-    print("hello")
-    return (records_by_group,)
-
-
-@app.cell
-def _(alt, records_by_group):
-    # Stacked bar chart by VP1_group if available
-    if records_by_group is not None:
-        group_chart = alt.Chart(records_by_group).mark_bar().encode(
-            x=alt.X('year:O', title='Year'),
-            y=alt.Y('count:Q', title='Number of Records'),
-            color=alt.Color('VP1_group:N', title='VP1 Group', scale=alt.Scale(scheme='category20')),
-            tooltip=['year:O', 'VP1_group:N', 'count:Q']
-        ).properties(
-            width=700,
-            height=400,
-            title='Norovirus Records per Year by VP1 Group (Top 10 Groups)'
-        ).interactive()
-
-        group_chart
-    else:
-        print("Cannot create VP1_group chart - column not found")
-    return
-
-
-@app.cell
-def _(df_with_year):
-    # Geographic distribution if country column exists
-    if 'country' in df_with_year.columns:
-        country_counts = df_with_year['country'].value_counts().reset_index()
-        country_counts.columns = ['country', 'count']
-        country_counts.head(20)
-    else:
-        country_counts = None
-    return (country_counts,)
-
-
-@app.cell
-def _(alt, country_counts):
-    # Top countries bar chart
-    if country_counts is not None:
-        country_chart = alt.Chart(country_counts.head(20)).mark_bar().encode(
-            x=alt.X('count:Q', title='Number of Records'),
-            y=alt.Y('country:N', title='Country', sort='-x'),
-            tooltip=['country:N', 'count:Q']
-        ).properties(
-            width=700,
-            height=500,
-            title='Top 20 Countries by Number of Records'
-        ).interactive()
-
-        country_chart
-    else:
-        print("Cannot create country chart - column not found")
     return
 
 
